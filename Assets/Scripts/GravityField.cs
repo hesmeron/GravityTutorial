@@ -13,13 +13,9 @@ public class GravityField : MonoBehaviour
     private Vector2 _extent;
     [SerializeField]
     private float _cellSize = 0.25f;
-    [SerializeField] 
-    private Vector2[] _serializedAccelerationTable;
     [SerializeField]
-    private int _width;
-    [SerializeField]
-    private int _height;
-    private Vector2[,] _accelerationTable;
+    private Serialized2DArray _accelerationTable;
+
 
     public Vector2 Extent
     {
@@ -37,9 +33,9 @@ public class GravityField : MonoBehaviour
 
         float drawingStep = _cellSize/3f;
 
-        for (int x = 0; x < _width; x++)
+        for (int x = 0; x < _accelerationTable.Width; x++)
         {
-            for (int y = 0; y < _height; y++)
+            for (int y = 0; y < _accelerationTable.Height; y++)
             {
                 Vector3 position = PositionFromCoordinates(x,y);
                 Vector2 acceleration = GetAccelerationAtPosition(position + transform.position) / 50f;
@@ -61,29 +57,7 @@ public class GravityField : MonoBehaviour
         }
     }
 
-    public void OnBeforeSerialize()
-    {
-        _serializedAccelerationTable = new Vector2[_width * _height];
-        for (int x = 0; x < _width; x++)
-        {
-            for (int y = 0; y < _height; y++)
-            {
-                _serializedAccelerationTable[(_height * x) + y] = _accelerationTable[x,y];
-            }
-        }
-    }
-        
-    public void OnAfterDeserialize()
-    {
-        _accelerationTable = new Vector2[_width, _height];
-        for (int x = 0; x < _width; x++)
-        {
-            for (int y = 0; y < _height; y++)
-            {
-                _accelerationTable[x, y] = _serializedAccelerationTable[(_height * x) + y];
-            }
-        }
-    }
+
     
     private static void DrawArrow(Vector3 position, Vector3 direction)
     {
@@ -110,16 +84,16 @@ public class GravityField : MonoBehaviour
 
     public void CalculateAcceleration()
     {
-        _width = Mathf.CeilToInt(_extent.x / _cellSize) +1;
-        _height = Mathf.CeilToInt(_extent.y / _cellSize) +1;
-        
-        _accelerationTable = new Vector2[_width, _height];
-        for (int x = 0; x < _width; x++)
+        int width = Mathf.CeilToInt(_extent.x / _cellSize) +1;
+        int height = Mathf.CeilToInt(_extent.y / _cellSize) +1;
+
+        _accelerationTable = new Serialized2DArray(width, height);
+        for (int x = 0; x < width; x++)
         {
-            for (int y = 0; y < _height; y++)
+            for (int y = 0; y < height; y++)
             {
                 Vector3 position = PositionFromCoordinates(x, y);
-                _accelerationTable[x, y] = CalculateAccelerationAtPosition(position);
+                _accelerationTable.SetValue(x, y, CalculateAccelerationAtPosition(position));
             }
         }
     }
@@ -129,17 +103,17 @@ public class GravityField : MonoBehaviour
         Vector2 localPosition = (Vector2) position - (Vector2) transform.position + (_extent/2f);
         float xFull = localPosition.x / _cellSize;
         float yFull = localPosition.y / _cellSize;
-        int baseXIndex = Mathf.Clamp(Mathf.FloorToInt(xFull),0, _width-1);
-        int baseYIndex = Mathf.Clamp(Mathf.FloorToInt(yFull), 0, _height-1);
+        int baseXIndex = Mathf.Clamp(Mathf.FloorToInt(xFull),0, _accelerationTable.Width-1);
+        int baseYIndex = Mathf.Clamp(Mathf.FloorToInt(yFull), 0, _accelerationTable.Height-1);
         float xRest = xFull - baseXIndex;
         float yRest = yFull - baseYIndex;
-        int otherX = Mathf.Clamp(baseXIndex + (int) Mathf.Sign(xRest), 0, _width-1);
-        int otherY = Mathf.Clamp(baseYIndex + (int)Mathf.Sign(yRest), 0, _height - 1);
+        int otherX = Mathf.Clamp(baseXIndex + (int) Mathf.Sign(xRest), 0, _accelerationTable.Width-1);
+        int otherY = Mathf.Clamp(baseYIndex + (int)Mathf.Sign(yRest), 0, _accelerationTable.Height - 1);
             
-        Vector2 forceD = _accelerationTable[baseXIndex, baseYIndex];
-        Vector2 forceC = _accelerationTable[otherX, baseYIndex];
-        Vector2 forceB = _accelerationTable[otherX, otherY];
-        Vector2 forceA = _accelerationTable[baseXIndex, otherY];
+        Vector2 forceD = _accelerationTable.GetValue(baseXIndex, baseYIndex);
+        Vector2 forceC = _accelerationTable.GetValue(otherX, baseYIndex);
+        Vector2 forceB = _accelerationTable.GetValue(otherX, otherY);
+        Vector2 forceA = _accelerationTable.GetValue(baseXIndex, otherY);
         Vector3 force = Blerp(forceA, forceB, forceD, forceC, xRest, yRest);
 
         return  force;

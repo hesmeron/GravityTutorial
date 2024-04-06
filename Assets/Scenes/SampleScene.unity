@@ -516,7 +516,11 @@ MonoBehaviour:
   - {fileID: 2103286030}
   - {fileID: 1078574213}
   _extent: {x: 13.630711, y: 9.761672}
-  _cellSize: 0.5
+  _cellSize: 0.4
+  _accelerationTable:
+    _serializedAccelerationTable: []
+    _width: 36
+    _height: 26
 --- !u!4 &1877039916
 Transform:
   m_ObjectHideFlags: 0
